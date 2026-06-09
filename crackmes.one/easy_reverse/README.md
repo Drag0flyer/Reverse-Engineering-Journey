@@ -35,7 +35,7 @@ This purely theoretical phase validated the translation from hexadecimal opcodes
 ## 4. Hardening Objectives & Evolution (Awaiting Implementation)
 This document serves as a logbook and will be updated as new offensive techniques are implemented on this specific binary:
 
-- [x] **Patching Phase:** Physical modification of the ELF file using a hex editor. The objective is to locate the conditional jump validation (`JNE` -> opcode `75`) and neutralize it (`JMP` -> `74EB` or `NOP` -> `90 90`) to force success regardless of the argument provided.
+- [x] **Patching Phase:** Physical modification of the ELF file using a hex editor. The objective is to locate the conditional jump validation (`JNE` -> opcode `75`) and neutralize it (`JMP` -> `74` or `NOP` -> `90 90`) to force success regardless of the argument provided.
 - [ ] **Dynamic Analysis Phase:** Real-time monitoring of the general-purpose registers (`RAX`, `RBP`) and the instruction pointer (`RIP`) using **GDB + GEF** on WSL2.
 
 ---
