@@ -46,4 +46,4 @@ To bypass the validation logic completely, the binary was patched using a hex ed
 * **Original Bytes:** `75 7E` (`JNZ LAB_00101257`)
 * **Patched Bytes:** `EB 2F` (`JMP short` targeting `LEA` at `0x00101208`)
 
-This successfully forces the execution flow into the success block, printing `Nice Job!!` and the flag without checking the input parameters.
+This successfully forces the execution flow into the success block, printing `Nice Job!!` and the flag without checking the input parameters. For more information, check the patch.py, an automated patcher.
