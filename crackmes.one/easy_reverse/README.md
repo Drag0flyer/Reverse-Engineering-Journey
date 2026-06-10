@@ -60,9 +60,9 @@ To bypass the validation logic without modifying the original file on disk, a dy
 Instead of altering the file's opcodes permanently, the script intercepts execution in real time by setting breakpoints at every critical conditional crossroad inside the ```main``` function (argument check, length check, and ```@``` character validation). At each halt, the script directly manipulates the processor's register flags in RAM to force execution down the success path.
 
 ### Interception Mechanics:
-1. **Breackpoint 1 (```*main+19```)** Intercepts the argument count routine and adjusts the status flags.
-2. **Breackpoint 2 (```*main+44```)** Forces the Zero Flag using GEF (```flags +zero```) to satisfy the required length constraint.
-3. **Breackpoint 3 (```*main+66```)** Forces the Zero Flag using GEF to satisfy the the secret character validation, regardless of the user input provided.
+1. **Breakpoint 1 (```*main+19```)** Intercepts the argument count routine and adjusts the status flags.
+2. **Breakpoint 2 (```*main+44```)** Forces the Zero Flag using GEF (```flags +zero```) to satisfy the required length constraint.
+3. **Breakpoint 3 (```*main+66```)** Forces the Zero Flag using GEF to satisfy the secret character validation, regardless of the user input provided.
 
 To run this dynamic patch entirely in the background, inject the register flags on the fly, and automatically extract the flag without manual interaction, use the following command:
 
