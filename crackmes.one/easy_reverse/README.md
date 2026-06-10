@@ -36,7 +36,7 @@ This purely theoretical phase validated the translation from hexadecimal opcodes
 This document serves as a logbook and will be updated as new offensive techniques are implemented on this specific binary:
 
 - [x] **Patching Phase:** Physical modification of the ELF file using a hex editor. The objective is to locate the conditional jump validation (`JNE` -> opcode `75`) and neutralize it (`JMP` -> `74` or `NOP` -> `90 90`) to force success regardless of the argument provided.
-- [ ] **Dynamic Analysis Phase:** Real-time monitoring of the general-purpose registers (`RAX`, `RBP`) and the instruction pointer (`RIP`) using **GDB + GEF** on WSL2.
+- [x] **Dynamic Analysis Phase:** Real-time monitoring of the general-purpose registers (`RAX`, `RBP`) and the instruction pointer (`RIP`) using **GDB + GEF** on WSL2.
 
 ---
 
@@ -46,4 +46,26 @@ To bypass the validation logic completely, the binary was patched using a hex ed
 * **Original Bytes:** `75 7E` (`JNZ LAB_00101257`)
 * **Patched Bytes:** `EB 2F` (`JMP short` targeting `LEA` at `0x00101208`)
 
-This successfully forces the execution flow into the success block, printing `Nice Job!!` and the flag without checking the input parameters. For more information, check the patch.py, an automated patcher.
+This successfully forces the execution flow into the success block, printing `Nice Job!!` and the flag without checking the input parameters.
+The automation of this static patch is handled by the script `patch.py`. To execute it and generate the patched binary, use the following command:
+```bash
+python3 patch.py
+```
+
+---
+
+## 6. Dynamic Patching & Runtime Automation (GDB + GEF)
+To bypass the validation logic without modifying the original file on disk, a dynamic automation approach was implemented using a GDB command script (```script.gdb```) coupled with the GEF extension.
+
+Instead of altering the file's opcodes permanently, the script intercepts execution in real time by setting breakpoints at every critical conditional crossroad inside the ```main``` function (argument check, length check, and ```@``` character validation). At each halt, the script directly manipulates the processor's register flags in RAM to force execution down the success path.
+
+### Interception Mechanics:
+1. **Breackpoint 1 (```*main+19```)** Intercepts the argument count routine and adjusts the status flags.
+2. **Breackpoint 2 (```*main+44```)** Forces the Zero Flag using GEF (```flags +zero```) to satisfy the required length constraint.
+3. **Breackpoint 3 (```*main+66```)** Forces the Zero Flag using GEF to satisfy the the secret character validation, regardless of the user input provided.
+
+To run this dynamic patch entirely in the background, inject the register flags on the fly, and automatically extract the flag without manual interaction, use the following command:
+
+```Bash
+gdb -q -batch ./rev50_linux64-bit -x script.gdb
+```
