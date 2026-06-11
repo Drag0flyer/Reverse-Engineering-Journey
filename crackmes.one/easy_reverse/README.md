@@ -4,7 +4,7 @@
 * **Author:** cbm-hackers
 * **Platform:** Crackmes.one
 * **Architecture:** Unix/Linux x86-64
-* **Global Difficulty:** 1.3 / 5.0
+* **Global Difficulty:** 1.3 / 6.0
 * **Analysis Environment:** Windows 11 + WSL2 (Ubuntu)
 * **Tools Used:** Ghidra (Static Analysis)
 
