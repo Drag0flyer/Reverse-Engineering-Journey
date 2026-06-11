@@ -34,7 +34,7 @@ This purely theoretical phase validated the translation from hexadecimal opcodes
 ## 4. Hardening Objectives & Evolution (Awaiting Implementation)
 This document serves as a logbook and will be updated as new offensive techniques are implemented on this specific binary:
 
-- [x] **Patching Phase:** Physical modification of the ELF file using a hex editor. The objective is to locate the conditional jump validation (`JNE` -> opcode `75`) and neutralize it (`JMP` -> `74` or `NOP` -> `90 90`) to force success regardless of the argument provided.
+- [x] **Patching Phase:** Physical modification of the ELF file using a hex editor. The objective is to locate the conditional jump validation (`JNE` -> opcode `75`) and neutralize it (`JMP` -> `EB` or `NOP` -> `90 90`) to force success regardless of the argument provided.
 - [x] **Dynamic Analysis Phase:** Real-time monitoring of the general-purpose registers (`RAX`, `RBP`) and the instruction pointer (`RIP`) using **GDB + GEF** on WSL2.
 
 ---
@@ -53,7 +53,24 @@ python3 patch.py
 
 ---
 
-## 6. Dynamic Patching & Runtime Automation (GDB + GEF)
+## 6. Algorithmic Exploitation: Keygen Automation
+Instead of patching the binary or manipulating runtime flags, a weaponized keygen approach was developed to satisfy the binary's validation constraints programmatically.
+
+### Cryptographic & Logic Constraints:
+Through static analysis of the array indexing routines, two hardware-enforced rules were isolated:
+1. **Length Constraint:** The total input string length must equal exactly `10` characters.
+2. **Character Check:** The 5th element of the array (index `4` in memory) must strictly match the ASCII character `@`.
+
+The script `keygen.py` automates the generation of compliant keys. To prevent breaking the Linux shell execution environment (Bash), the script filters out dangerous characters such as quotes (`"`, `'`, `` ` ``), semicolons (`;`), and spaces, ensuring the output string is immediately safely executable as an inline argument.
+
+To generate a dynamic, shell-safe valid key, execute:
+```bash
+python3 keygen.py
+```
+
+---
+
+## 7. Dynamic Patching & Runtime Automation (GDB + GEF)
 To bypass the validation logic without modifying the original file on disk, a dynamic automation approach was implemented using a GDB command script (```script.gdb```) coupled with the GEF extension.
 
 Instead of altering the file's opcodes permanently, the script intercepts execution in real time by setting breakpoints at every critical conditional crossroad inside the ```main``` function (argument check, length check, and ```@``` character validation). At each halt, the script directly manipulates the processor's register flags in RAM to force execution down the success path.
