@@ -6,8 +6,7 @@
 * **Architecture:** Unix/Linux x86-64
 * **Global Difficulty:** 1.3 / 6.0
 * **Analysis Environment:** Windows 11 + WSL2 (Ubuntu)
-* **Tools Used:** Ghidra (Static Analysis)
-
+* **Tools Used:** Ghidra (Static Analysis) and GDB + GEF (Dynamic Analysis)
 ---
 
 ## 2. Static Analysis & Resolution
