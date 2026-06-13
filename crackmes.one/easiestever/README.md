@@ -155,6 +155,11 @@ EXCEPTION_DEBUG_INFO:
    ExceptionInformation[01]: FFFFFFFFFFFFFFFF Inaccessible Address
 ```
 
-#### Technical Note on RBP Register Instability:
-The appearance of the crash address FFFFFFFFFFFFFFFF (or a residual system address) instead of the expected pure 0x4242424242424242 is caused by the pop rbp instruction executing immediately before the ret.
-Having swallowed the 'A's during Phase 1, the RBP register was loaded with an invalid base address. When the Windows runtime attempted to unwind the stack following the loop break, this corrupted base pointer caused a misalignment of the RSP pointer. Consequently, the ret instruction read an adjacent, unintended memory slot. The hijacking of the control flow (Control Flow Hijacking) remains entirely successful and confirms the validity of the injection technique.
+#### Technical Note on RBP Register Instability & Windows Runtime Behavior:
+The appearance of the crash address `FFFFFFFFFFFFFFFF` (or a residual system address) instead of the expected pure `0x4242424242424242` is tied to the stack-unwinding mechanisms of the Windows environment. 
+
+Two distinct experiments were conducted to isolate this behavior:
+1. **Direct RBP Restoration:** By setting a breakpoint at the very beginning of the function's epilogue (`add rsp, 40`) and manually reconstructing a valid `Saved RBP` directly in memory, the `RBP` register was successfully restored to its pristine state prior to the `pop rbp` execution. 
+2. **Runtime Stack Shifting:** Even with a perfectly clean `RBP`, the final `ret` instruction still attempts to pull its destination from an altered `RSP` context (`0x...FC48`). This behavior occurs because intermediate conditional branch operations and external API invocations—specifically the `ShellExecuteA` call sequence used to spawn the browser—dynamically allocate and shift the stack boundaries beyond the initial standard frame configurations.
+
+Consequently, while manual runtime manipulation successfully patches hardware register states, achieving a deterministic jump directly to the payload's `0x42424242` value without system-driven offsets requires a "One-Shot" script-driven automated execution flow, bypassing interactive intermediate terminal loops entirely. Nonetheless, the control flow hijacking remains fully validated as a successful memory corruption exploit.
