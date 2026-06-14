@@ -28,7 +28,7 @@ Analysis of the target address `FUN_00406f40` confirms that this is the actual *
 Once inside `main`, Ghidra's decompilation environment presented raw code that was heavily optimized and masked by generic types. Rigorous renaming and type reconstruction restored the original logical flow.
 
 ### Refactoring the Environment:
-* **Stack Initialization:** The standard function `_memset(password, 0, 0xf)` is called to clear a 15-byte array allocated on the stack, overwriting residual memory with null bytes (`0x00`).
+* **Stack Initialization:** The standard function `_memset(password, 0, 0xf)` is called to clear a 15-byte stack buffer allocated on the stack, overwriting residual memory with null bytes (`0x00`).
 * **Resolving Windows Streams:** The opaque instruction `stdin = ___acrt_iob_func(0)` was identified as the macro to retrieve the standard input stream (`stdin`, index 0 under the Microsoft Runtime architecture).
 * **Identifying Saisie (Input):** The underlying function `thunk_FUN_00414d71`, taking the buffer, maximum size (`0xf`), and the input stream as parameters, was legitimately renamed to `fgets`.
 
@@ -43,15 +43,15 @@ The binary relies on a strict and sequential validation pipeline composed of fou
      │
 (Returns 1)
      ▼
-   2. checkOne()      ───( Returns 0 )───► [Check one failed]
+ 2. checkOne()      ───( Returns 0 )───► [Check one failed]
      │
 (Returns 1)
      ▼
-   3. checkTwo()      ───( Returns 0 )───► [Check two failed]
+ 3. checkTwo()      ───( Returns 0 )───► [Check two failed]
      │
 (Returns 1)
      ▼
-   4. checkThree()    ───( Returns 0 )───► [Check three failed]
+ 4. checkThree()    ───( Returns 0 )───► [Check three failed]
      │
 (Returns 1)
      ▼
@@ -137,3 +137,45 @@ To generate a valid serial key, execute the automation script using the followin
 ```bash
 python3 keygen.py
 ```
+
+---
+
+## 6. Dynamic Analysis & Runtime Control-Flow Manipulation
+
+In addition to static patching and algorithmic keygenning, a dynamic audit of the binary was conducted using x32dbg to map out the application's runtime validation mechanics and evaluate its behavior under active process manipulation.
+
+### Dynamic Execution Mapping & Environmental Divergence
+When executing the target binary natively from a standard Windows file explorer context, a significant behavioral anomaly was observed: appending a `_patched` string to the binary name triggers the Windows User Account Control (UAC) Installer Detection heuristics. This forces an elevated administrative token request and isolates the execution within a transient console context that terminates immediately upon process exit. Neutralizing this artifact requires renaming the binary (e.g., using a `_r` or `_pat` suffix) to maintain execution stability inside an existing shell environment.
+
+Under the debugger, because the application compiles with **Address Space Layout Randomization (ASLR)** enabled, the base address of the image dynamically relocates at runtime (e.g., mapping the base to `0x008A0000` instead of the standard `0x00400000`). Consequently, the relative virtual address (RVA) offset of the user-space entry point must be derived dynamically:
+
+$$\text{Active Entry Address} = \text{Base Address} + \text{Static Ghidra Offset} = \text{0x008A0000} + \text{0x6F40} = \text{0x008A6F40}$$
+
+### x86 Stack Framing & Argument Passing Mechanics
+Unlike x64 architectures that leverage volatile registers (`RCX`, `RDX`, etc.) for fast parameter passing, this 32-bit binary strictly complies with standard stack-driven calling conventions. Prior to triggering the validation subroutines, the application must explicitly provision the stack frame to expose the local variables:
+
+```assembly
+00406F86   8D 55 EC         LEA EDX, dword ptr ss:[EBP - 0x14]
+00406F89   52               PUSH EDX
+00406F8A   E8 FA C1 FF FF   CALL formatVerifier
+```
+
+The `LEA` instruction computes the effective address of the destination `password` storage array—located exactly 20 bytes (`0x14`) below the current base pointer (`EBP`)—and places the raw memory pointer into `EDX`. The subsequent `PUSH EDX` operation drops this address reference directly onto the top of the stack (`ESP`), allowing the callee subroutine to extract and read the user-supplied string buffer.
+
+### Runtime Control Flow Hijacking via EFLAGS Evasion
+The application chains its security validation checks within a logical AND (`&&`) framework inside `main`. This implementation relies on conditional evaluation short-circuiting: if any check fails, the execution stream is directed immediately to the failure termination routines. This branching logic was subverted during active runtime analysis by placing hardware breakpoints on the conditional jumps and manually toggling the CPU's core processing flags.
+
+The specific manipulation path to bypass the conditional logic with a single-character dummy key (`"a"`) is detailed below:
+
+1. **`formatVerifier` Bypass (Address `0x008A6F94`):** The invalid key length causes the routine to return `0`, prompting `TEST EAX, EAX` to set the Zero Flag (`ZF = 1`). The subsequent `JE` (*Jump if Equal*) instruction prepares to pivot to the global failure path (`0x008A6FE2`). Double-clicking the flag registry to clear it (`ZF = 0`) misleads the CPU, forcing it to fall through into the success block and output `"Key in correct format."`.
+2. **`checkOne` Bypass (Address `0x008A6FB1`):** The non-numeric payload fails the first numerical constraint check, logging `"Check one failed."` internally and clearing `EAX`. The conditional `JE` branch is neutralized by manually forcing `ZF = 0`, preserving the sequential execution flow.
+3. **`checkTwo` Evaluation (Address `0x008A6FC1`):** At this instruction boundary, the environmental state of the registers naturally leaves `ZF` at `0`. As a result, the conditional `JE` branch evaluates as false without manual intervention, allowing the instruction pointer to step cleanly past the obstacle into the final verification logic.
+4. **`checkThree` Bypass (Address `0x008A6FD1`):** The missing substring match triggers an internal `"Check three failed."` string output. Modifying the resulting validation flag a final time (`ZF = 0`) completely breaks out of the short-circuit constraint window. 
+
+The CPU passes directly to the success path at address `0x008A6FD3`:
+
+```assembly
+008A6FD3   68 84 60 90 00   PUSH keygenme_1.906084    ; "Congrats, you did it!\n"
+```
+
+This active manipulation induces a hybrid execution state, demonstrating that the underlying core logic can be entirely manipulated in memory by directly controlling the CPU flags, successfully forcing the application to print the success message alongside the internal error logs.
