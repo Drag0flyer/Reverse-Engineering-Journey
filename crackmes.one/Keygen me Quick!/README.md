@@ -112,3 +112,28 @@ The automation of this static patch is handled by the script `patch.py`. To exec
 ```bash
 python3 patch.py
 ```
+
+---
+
+## 5. Algorithmic Exploitation: Keygen Automation
+Rather than modifying the binary or manipulating registers on the fly, a pure algorithmic exploitation approach was developed by reversing the structural and mathematical validation rules discovered during static analysis in Ghidra.
+
+### Algorithmic & Structural Constraints:
+The verification routine evaluates the serial key by breaking it down into distinct segments, validating specific character sets, positioning physical delimiters, and enforcing strict data type restrictions. 
+
+Analysis of the reversed routines revealed four critical constraints required to forge a perfectly legitimate serial key:
+
+1. **The Strict Mask Boundary (`formatVerifier`):** The password must have an absolute length of exactly **14 characters** (`0xe` bytes). Furthermore, physical dash separators (`'-'`) must reside at indices `[4]` and `[9]`, dictating a precise `XXXX-XXXX-XXXX` topology.
+2. **Strict Numerical Constraint (`checkOne`):** The first block (indices `[0]` through `[3]`) must consist entirely of standard numerical digits, forcing individual byte values to fall inclusively between ASCII `0` (decimal `48`) and ASCII `9` (decimal `57`).
+3. **Parity Bitmask Enforcement (`checkTwo`):** The secondary block (indices `[5]` through `[8]`) is subject to a strict mathematical parity filter. The application applies a bitwise AND operation (`& 1U`) on each byte to ensure the least significant bit is zero. Consequently, only characters with an **even ASCII value** are permitted (limiting the workspace to the digits `0`, `2`, `4`, `6`, and `8`).
+4. **Hardcoded Substring Match (`checkThree`):** The final block uses pointer arithmetic targeting `password + 10` and leverages a substring check. The first byte of this trailing segment (index `[10]`) must explicitly match the uppercase letter **`R`** (extracted from the internal reference token `"R3KT"`). The final three indices (`[11]`, `[12]`, and `[13]`) are completely unverified by the comparison routine and accept any printable ASCII padding.
+
+The Python generation script safely filters out non-printable control characters (such as line feeds, tabs, or carriage returns) to prevent clipboard payload corruption when copying and pasting keys directly into the Windows host terminal emulator.
+
+The `keygen.py` script automatically assembles these rules to generate fully compliant, mathematically sound keys on demand.
+
+To generate a valid serial key, execute the automation script using the following command:
+
+```bash
+python3 keygen.py
+```
