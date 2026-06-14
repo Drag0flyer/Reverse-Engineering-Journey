@@ -6,7 +6,7 @@
 * **Architecture:** Windows x86 (32-bit PE Executable)
 * **Global Difficulty:** 1.9/6
 * **Analysis Environment:** Windows 10 (VM)
-* **Tools Used:** Ghidra (Static Analysis)
+* **Tools Used:** Ghidra (Static Analysis), x32dbg (Dynamic Analysis), HxD (Patching) and Python 3 (Scripting)
 ---
 
 ## 2. Static Analysis & Resolution
