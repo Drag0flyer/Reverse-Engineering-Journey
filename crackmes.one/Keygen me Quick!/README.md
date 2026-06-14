@@ -77,3 +77,38 @@ The loop inspects the central segment located between indices `5` and `8`. The e
 The final routine isolates the trailing block using pointer arithmetic, targeting the address `password + 10`.
 * The program loads the reference string `"R3KT"` into local memory using the optimized `builtin_strncpy` function.
 * A call to `_strncmp(passwordPart, password + 10, 1)` compares only the **first byte** (length of 1) of the last segment with the first character of the stored pattern. Index `password[10]` must therefore imperatively be the uppercase letter **`R`**. Indices `11`, `12`, and `13` are not subjected to any comparison and accept any printable ASCII character.
+
+---
+
+## 4. Hardening Bypass via Permanent Static Patching
+To permanently neutralize the serialization verification without having to attach a debugger or input a valid key at every execution, a physical static patch was designed to alter the control flow mechanics directly on disk.
+
+### Instruction Engineering (Assembly Level):
+Instead of patching the prologues of individual validation subroutines (`checkOne`, `checkTwo`, `checkThree`), the patch optimizes efficiency by targeting the fundamental conditional branch within the `main` function. This single modification entirely bypasses the validation sequence.
+
+The mutation is executed at the file offset corresponding to the initial global format check evaluation:
+
+* **Original Sequence (`0x00406F94`):** `74 4C`
+  * Translation: `JZ LAB_00406fe2` (Jump to the "Invalid key format" failure path if `formatVerifier` returns `0`).
+* **Patched Sequence:** `EB 3D`
+  * Translation: `JMP 0x00406FD3` (Unconditional Short Jump).
+
+### Mathematical Offset Derivation:
+In x86 assembly, relative short jumps (`EB`) calculate their destination displacement from the address of the **next sequential instruction**. The calculation for this patch is derived as follows:
+
+$$\text{Current Instruction Address} = \text{0x00406F94}$$
+$$\text{Instruction Length (JZ)} = 2 \text{ bytes}$$
+$$\text{Next Instruction Address} = \text{0x00406F94} + \text{0x2} = \text{0x00406F96}$$
+$$\text{Target Destination (Congrats PUSH)} = \text{0x00406FD3}$$
+
+$$\text{Required Displacement Offset} = \text{0x00406FD3} - \text{0x00406F96} = \text{0x3D}$$
+
+Injecting `EB 3D` effectively short-circuits the application's runtime flow. The CPU completely skips over every algorithmic constraint check and lands cleanly on the stack preparation routine for the success message. 
+
+Furthermore, renaming the generated executable to avoid strings like `_patched` ensures that the Windows User Account Control (UAC) Installer Detection heuristcs do not force unnecessary elevated administrative token demands or spawn unmapped transient terminal contexts.
+
+The automation of this static patch is handled by the script `patch.py`. To execute it and generate the autonomous modified binary, use the following command:
+
+```bash
+python3 patch.py
+```
