@@ -1,7 +1,7 @@
-# Write-Up: simplecrackme (EasiestEver)
+# Write-Up: EasiestEver (BadEngineer)
 
 ## 1. Challenge Specifications
-* **Author:** BadEngineer / EasiestEver
+* **Author:** BadEngineer
 * **Platform:** Crackmes.one
 * **Architecture:** Windows x86-64 (PE Executable)
 * **Global Difficulty:** 1.6 / 6.0
