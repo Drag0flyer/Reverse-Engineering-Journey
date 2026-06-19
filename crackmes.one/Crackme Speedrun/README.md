@@ -106,3 +106,9 @@ The ultimate logical barrier resides within the `main` routine, where a standard
 
 ### Resulting Control Flow Behavior:
 As a consequence of this instruction elimination, the CPU slides straight through the conditional checks without evaluating the registers. Testing the patched binary with arbitrary one-character inputs (such as `'a'`) instantly yields a successful execution path, confirming that the crackme's security model has been permanently and statically defeated.
+
+The automation of this static patch is handled by the script `patch.py`. To execute it and generate the autonomous modified binary, use the following command:
+
+```bash
+python3 patch.py
+```
