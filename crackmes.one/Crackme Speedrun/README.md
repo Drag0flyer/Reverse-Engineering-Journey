@@ -112,3 +112,20 @@ The automation of this static patch is handled by the script `patch.py`. To exec
 ```bash
 python3 patch.py
 ```
+
+---
+
+## 5. Dynamic Analysis & Runtime Patching
+While static patching alters the persistent binary state on disk, dynamic analysis allows for real-time manipulation of the application's volatile memory context during active execution.
+
+### Runtime State Manipulation (x32dbg):
+By attaching x32dbg to the active 32-bit process, the sequential validation pipeline inside `sub_401490` was intercepted and subverted without modifying a single byte on disk.
+
+#### Live Flag Tampering on Conditional Jumps
+The validation logic relies on a series of short-circuit evaluations (`&&`) translated into consecutive conditional jumps (`JZ` / `JE`) at the assembly level. 
+
+1. **Setting Breakpoints:** Software breakpoints were mapped directly onto each conditional jump instruction trailing the `sub_4015A0` subroutines.
+2. **Intercepting the Stream:** Arbitrary input was provided to trigger execution. Upon hitting each sequential breakpoint, the `EAX` register carried a failure state, meaning the conditional jump was poised to divert the execution path to the failure block.
+3. **Flipping the Zero Flag (ZF):** By manually toggling the **Zero Flag (ZF)** from `0` to `1` (or vice versa depending on the compiler's choice of `JZ`/`JNZ`) in the x32dbg registers panel at each breakpoint, the CPU was forced to evaluate the condition as a success.
+
+This forced the control flow straight through the entire chain of checks, successfully triggering the internal flag preparation routine `sub_4012D0()`.
