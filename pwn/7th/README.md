@@ -78,9 +78,9 @@ The precise byte-array payload was constructed using Python and piped natively w
 ```
 
 ### Exploitation Output:
-"""text
+```text
 Enter your name: id
 uid=1216(app-systeme-ch16-cracked) gid=1116(app-systeme-ch16) groups=1116(app-systeme-ch16),100(users)
 cat ./.passwd              
 REDACTED
-"""
+```
